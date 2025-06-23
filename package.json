@@ -1,0 +1,15 @@
+{
+  "name": "task-processor",
+  "version": "1.0.0",
+  "description": "Task processor",
+  "main": "handler.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "offline": "serverless offline"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "serverless-offline": "^14.4.0",
+    "serverless-webpack": "^5.15.1"
+  }
+}
