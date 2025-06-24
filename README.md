@@ -16,3 +16,31 @@
   }`
 
 ## Architecture:
+  [Client]
+    |
+    | HTTP POST /submit
+    v
+  [API Gateway]
+    |
+    v
+  [Lambda: submitTask]
+    |\
+    | \-- Check uniqueness
+    | \-- Save task with retryCount = 0 to dynamo
+    | \-- Send message to SQS
+    |
+    v
+  [SQS: TaskQueue] --> [Lambda: processTask]
+                              |
+                              |-- Simulate task (60% failure)
+                              |-- If fail increment retryCount and requeue with exponential delay
+                              |-- If max retries exceeded - throw error so that message moves to DLQ
+                              |
+                              |-- If success - remove from dynamo
+    |
+    v
+  [Lambda: monitorDLQ]
+    |
+    |-- Log and delete from dynamo
+    v
+  [CloudWatch Alarm]
