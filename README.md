@@ -14,8 +14,10 @@
       "test": "testval"
     }
   }`
+  To clean up: `serverless remove`
 
 ## Architecture:
+```
   [Client]
     |
     | HTTP POST /submit
@@ -44,3 +46,4 @@
     |-- Log and delete from dynamo
     v
   [CloudWatch Alarm]
+```
