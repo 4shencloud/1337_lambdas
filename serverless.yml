@@ -1,0 +1,82 @@
+service: task-processor
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: eu-central-1
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+plugins:
+  - serverless-offline
+
+functions:
+  submitTask:
+    handler: handler.submitTask
+    environment:
+      TASK_QUEUE_URL:
+        Ref: TaskQueue
+    events:
+      - http:
+          path: submit
+          method: post
+          cors: true
+
+  processTask:
+    handler: handler.processTask
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ TaskQueue, Arn ]
+          batchSize: 1
+
+  monitorDLQ:
+    handler: handler.monitorDLQ
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [ DeadLetterQueue, Arn ]
+          batchSize: 1
+
+resources:
+  Resources:
+    TaskQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: task-queue
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [ DeadLetterQueue, Arn ]
+          maxReceiveCount: 2
+
+    DeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: dead-letter-queue
+
+  Outputs:
+    TaskQueueUrl:
+      Value:
+        Ref: TaskQueue
+      Export:
+        Name: TaskQueueUrl
+
+    DeadLetterQueueUrl:
+      Value:
+        Ref: DeadLetterQueue
+      Export:
+        Name: DeadLetterQueueUrl
