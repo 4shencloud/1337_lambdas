@@ -13,7 +13,7 @@
     "payload": {
       "test": "testval"
     }
-  }`
+  }`\
   To clean up: `serverless remove`
 
 ## Architecture:
