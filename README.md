@@ -2,7 +2,7 @@
   Make sure serverless is installed and authenticated\
   Install dependencies: `npm i`\
   Deploy to AWS: `serverless deploy`\
-  Get the lambda url\
+  Get the lambda url
 
 ## To test:
   Run the test script: `node test.js <DEPLOYED URL HERE>`\
@@ -14,7 +14,7 @@
       "test": "testval"
     }
   }`
-  To clean up: `serverless remove`\
+  To clean up: `serverless remove`
 
 ## Architecture:
 ```
