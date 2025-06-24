@@ -19,7 +19,15 @@ provider:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
           Resource: "*"
+  environment:
+    TASK_QUEUE_URL:
+      Ref: TaskQueue
+    TASK_RETRY_TABLE: TaskRetryTable
 
 plugins:
   - serverless-offline
@@ -27,9 +35,6 @@ plugins:
 functions:
   submitTask:
     handler: handler.submitTask
-    environment:
-      TASK_QUEUE_URL:
-        Ref: TaskQueue
     events:
       - http:
           path: submit
@@ -38,6 +43,7 @@ functions:
 
   processTask:
     handler: handler.processTask
+    timeout: 30
     events:
       - sqs:
           arn:
@@ -61,19 +67,54 @@ resources:
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt: [ DeadLetterQueue, Arn ]
-          maxReceiveCount: 2
+          maxReceiveCount: 1
+
+    TaskRetryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TaskRetryTable
+        AttributeDefinitions:
+          - AttributeName: taskId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: taskId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
 
     DeadLetterQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: dead-letter-queue
-
+    
+    DLQMessageAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: DLQMessageVisibleAlarm
+        AlarmDescription: "Triggered when messages are visible in DLQ"
+        Namespace: AWS/SQS
+        MetricName: ApproximateNumberOfMessagesVisible
+        Dimensions:
+          - Name: QueueName
+            Value: dead-letter-queue
+        Statistic: Sum
+        Period: 60
+        EvaluationPeriods: 1
+        Threshold: 1
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        TreatMissingData: notBreaching
+        ActionsEnabled: false  # can send email here
+      
   Outputs:
     TaskQueueUrl:
       Value:
         Ref: TaskQueue
       Export:
         Name: TaskQueueUrl
+
+    TaskRetryTableName:
+      Value: TaskRetryTable
+      Export:
+        Name: TaskRetryTableName
 
     DeadLetterQueueUrl:
       Value:
